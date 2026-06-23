@@ -1,17 +1,36 @@
-# Job Application Tracker
+# JobTrack
 
-JobTrack is a Next.js app that connects to Gmail, scans recent recruiting emails,
-and organizes applications into Applied, Waiting, and Rejected.
+A cozy job application tracker that reads your Gmail, finds recruiting updates, and keeps the job hunt a little less chaotic.
 
-## Features
+![JobTrack dashboard](public/screenshots/dashboard.png)
 
-- Gmail OAuth connection
-- Gmail read-only scanning for job application emails
-- Automatic classification into Applied, Waiting, and Rejected
-- Local JSON data store for a simple single-user MVP
-- Manual scan button and cron-friendly refresh endpoint
+## What It Does
 
-## Setup
+- Tracks applications across Applied, Waiting, and Rejected
+- Connects to Gmail with read-only access
+- Pulls out recruiting emails and useful links
+- Separates job alerts and recommendations into Opportunities
+- Lets you add jobs manually
+- Includes quick links to startup and job sites
+
+## Screenshots
+
+### Application Tracker
+
+![Application tracker](public/screenshots/dashboard.png)
+
+### Opportunities
+
+![Opportunities](public/screenshots/opportunities.png)
+
+## Run Locally
+
+Clone the repo:
+
+```bash
+git clone YOUR_REPO_URL
+cd job_application_tracker
+```
 
 Install dependencies:
 
@@ -19,49 +38,55 @@ Install dependencies:
 npm install
 ```
 
-Create local env:
+Create your env file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in:
+Add your Google OAuth values:
 
-```txt
+```env
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
-GOOGLE_CLIENT_ID="your-google-oauth-client-id"
-GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
-SYNC_CRON_SECRET="replace-with-a-random-secret"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+SYNC_CRON_SECRET="any-random-secret"
 ```
 
-Run locally:
+Start the app:
 
 ```bash
 npm run dev
 ```
 
-## Google OAuth
+Open:
+
+```txt
+http://localhost:3000
+```
+
+## Gmail Setup
 
 In Google Cloud Console:
 
-1. Create a project.
-2. Enable the Gmail API.
-3. Configure the OAuth consent screen.
-4. Create a web OAuth client.
-5. Add this redirect URI:
+1. Enable the Gmail API.
+2. Create an OAuth web client.
+3. Add this redirect URL:
 
 ```txt
 http://localhost:3000/api/google/callback
 ```
 
-The app stores Gmail tokens in local ignored files under `data/`.
+Then connect Gmail from the app and scan your inbox.
 
-## Scheduled Refresh
+## Tech Stack
 
-For deployed cron, call:
+- Next.js
+- TypeScript
+- Gmail API
+- Local JSON storage
+- CSS theme system
 
-```txt
-/api/sync/gmail?secret=YOUR_SYNC_CRON_SECRET
-```
+## Note
 
-Use once or twice per day.
+This is built as a personal/local project. Gmail access is read-only, and local app data is stored in `data/`.
