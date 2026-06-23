@@ -2,7 +2,6 @@
 
 A cozy job application tracker that reads your Gmail, finds recruiting updates, and keeps the job hunt a little less chaotic.
 
-![JobTrack dashboard](public/screenshots/dashboard.png)
 
 ## What It Does
 
@@ -17,11 +16,11 @@ A cozy job application tracker that reads your Gmail, finds recruiting updates, 
 
 ### Application Tracker
 
-<img width="1061" height="641" alt="image" src="https://github.com/user-attachments/assets/3a3d144e-4034-4042-9b22-41836f1d5109" />
+<img width="894" height="485" alt="image" src="https://github.com/user-attachments/assets/b62d6300-0621-45d2-b1aa-56ed6ea6b16f" />
 
 ### Opportunities
 
-<img width="894" height="485" alt="image" src="https://github.com/user-attachments/assets/b62d6300-0621-45d2-b1aa-56ed6ea6b16f" />
+<img width="1061" height="641" alt="image" src="https://github.com/user-attachments/assets/3a3d144e-4034-4042-9b22-41836f1d5109" />
 
 ## Run Locally
 
