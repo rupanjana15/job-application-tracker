@@ -67,6 +67,8 @@ http://localhost:3000
 
 ## Gmail Setup
 
+
+
 In Google Cloud Console:
 
 1. Enable the Gmail API.
@@ -90,3 +92,7 @@ Then connect Gmail from the app and scan your inbox.
 ## Note
 
 This is built as a personal/local project. Gmail access is read-only, and local app data is stored in `data/`.
+
+
+<img width="1061" height="641" alt="image" src="https://github.com/user-attachments/assets/3a3d144e-4034-4042-9b22-41836f1d5109" />
+<img width="894" height="485" alt="image" src="https://github.com/user-attachments/assets/b62d6300-0621-45d2-b1aa-56ed6ea6b16f" />
