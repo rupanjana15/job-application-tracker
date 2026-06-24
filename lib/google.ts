@@ -59,14 +59,24 @@ export async function saveGoogleCode(code: string) {
   const oauth2 = google.oauth2({ version: "v2", auth: oauth });
   const profile = await oauth2.userinfo.get();
 
-  await writeGmailTokens({
+  const nextTokens = {
     ...tokens,
     accountEmail: profile.data.email ?? null,
-  });
+  };
+
+  try {
+    await writeGmailTokens(nextTokens);
+  } catch {
+    // Vercel serverless cannot persist project files; deployed routes use cookies.
+  }
+  return nextTokens;
 }
 
-export async function syncGmail() {
-  const tokens = await readGmailTokens();
+export async function syncGmail(
+  passedTokens?: Awaited<ReturnType<typeof readGmailTokens>>,
+  options: { persistToFiles?: boolean } = { persistToFiles: true },
+) {
+  const tokens = passedTokens ?? (await readGmailTokens());
 
   if (!tokens?.refresh_token && !tokens?.access_token) {
     throw new Error("Gmail is not connected yet.");
@@ -75,7 +85,11 @@ export async function syncGmail() {
   const oauth = getOAuthClient();
   oauth.setCredentials(tokens);
   oauth.on("tokens", async (nextTokens) => {
-    await writeGmailTokens({ ...tokens, ...nextTokens });
+    try {
+      await writeGmailTokens({ ...tokens, ...nextTokens });
+    } catch {
+      // Vercel serverless cannot persist project files; refresh still works in memory for this request.
+    }
   });
 
   const gmail = google.gmail({ version: "v1", auth: oauth });
@@ -170,12 +184,16 @@ export async function syncGmail() {
     imported += 1;
   }
 
-  await writeApplications(applications);
-  await writeOpportunities(opportunities.slice(0, 80));
+  if (options.persistToFiles) {
+    await writeApplications(applications);
+    await writeOpportunities(opportunities.slice(0, 80));
+  }
 
   return {
     scanned: messages.length,
     imported: imported + opportunityImported,
+    applications,
+    opportunities: opportunities.slice(0, 80),
   };
 }
 

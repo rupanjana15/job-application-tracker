@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveGoogleCode } from "@/lib/google";
+import { writeGmailTokensCookie } from "@/lib/gmail-token-cookie";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -9,6 +10,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing Google authorization code." }, { status: 400 });
   }
 
-  await saveGoogleCode(code);
-  return NextResponse.redirect(new URL("/", request.url));
+  const tokens = await saveGoogleCode(code);
+  const response = NextResponse.redirect(new URL("/", request.url));
+
+  await writeGmailTokensCookie(tokens);
+
+  return response;
 }

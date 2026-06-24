@@ -1,6 +1,7 @@
 import { JobBoard } from "@/components/job-board";
 import { OpportunityList } from "@/components/opportunity-list";
 import { SidebarStats } from "@/components/sidebar-stats";
+import { readGmailTokensCookie } from "@/lib/gmail-token-cookie";
 import { readApplications, readGmailTokens, readOpportunities, readSyncRuns } from "@/lib/store";
 
 const jobSites = [
@@ -19,7 +20,7 @@ export default async function Home() {
   const applications = await readApplications();
   const opportunities = await readOpportunities();
   const syncRuns = await readSyncRuns();
-  const gmailTokens = await readGmailTokens();
+  const gmailTokens = (await readGmailTokensCookie()) ?? (await readGmailTokens());
   const latestSync = syncRuns[0];
   const isConnected = Boolean(gmailTokens?.access_token || gmailTokens?.refresh_token);
 
