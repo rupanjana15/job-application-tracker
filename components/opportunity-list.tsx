@@ -1,24 +1,51 @@
 "use client";
 
 import { useState } from "react";
+import { deleteOpportunity, readLocalOpportunities, seedLocalData } from "@/lib/local-db";
+import { useEffect } from "react";
 import type { JobOpportunity } from "@/lib/types";
 
 export function OpportunityList({ initialOpportunities }: { initialOpportunities: JobOpportunity[] }) {
   const [opportunities, setOpportunities] = useState(initialOpportunities);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    async function loadLocalData() {
+      await seedLocalData([], initialOpportunities);
+      setOpportunities(await readLocalOpportunities());
+    }
+
+    loadLocalData();
+  }, [initialOpportunities]);
 
   async function removeOpportunity(id: string) {
     const previous = opportunities;
     setOpportunities((current) => current.filter((opportunity) => opportunity.id !== id));
-
-    const response = await fetch("/api/opportunities", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
     });
 
-    if (!response.ok) {
+    try {
+      await deleteOpportunity(id);
+    } catch {
       setOpportunities(previous);
     }
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -38,10 +65,13 @@ export function OpportunityList({ initialOpportunities }: { initialOpportunities
           {opportunities.slice(0, 8).map((opportunity) => (
             <article className="opportunity-card" key={opportunity.id}>
               <div className="opportunity-card-head">
-                <div className="opportunity-meta">
+                <button className="opportunity-toggle" type="button" onClick={() => toggleExpanded(opportunity.id)}>
+                  <span className="opportunity-meta">
                   <span className="source-pill">{opportunity.source}</span>
                   <span className="muted-small">{formatDate(opportunity.receivedAt)}</span>
-                </div>
+                  </span>
+                  <strong>{opportunity.title}</strong>
+                </button>
                 <button
                   className="opportunity-remove"
                   type="button"
@@ -51,22 +81,25 @@ export function OpportunityList({ initialOpportunities }: { initialOpportunities
                   ×
                 </button>
               </div>
-              <div className="opportunity-body">
-                <h3>{opportunity.title}</h3>
-                <p>{opportunity.summary}</p>
-              </div>
-              <div className="opportunity-actions">
-                {opportunity.emailUrl ? (
-                  <a href={opportunity.emailUrl} target="_blank" rel="noreferrer">
-                    Open email
-                  </a>
-                ) : null}
-                {opportunity.links[0] ? (
-                  <a className="primary-action" href={opportunity.links[0]} target="_blank" rel="noreferrer">
-                    Open opportunity
-                  </a>
-                ) : null}
-              </div>
+              {expandedIds.has(opportunity.id) ? (
+                <>
+                  <div className="opportunity-body">
+                    <p>{opportunity.summary}</p>
+                  </div>
+                  <div className="opportunity-actions">
+                    {opportunity.emailUrl ? (
+                      <a href={opportunity.emailUrl} target="_blank" rel="noreferrer">
+                        Open email
+                      </a>
+                    ) : null}
+                    {opportunity.links[0] ? (
+                      <a className="primary-action" href={opportunity.links[0]} target="_blank" rel="noreferrer">
+                        Open opportunity
+                      </a>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
             </article>
           ))}
         </div>

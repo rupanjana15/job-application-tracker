@@ -1,13 +1,7 @@
 import { JobBoard } from "@/components/job-board";
 import { OpportunityList } from "@/components/opportunity-list";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { SidebarStats } from "@/components/sidebar-stats";
 import { readApplications, readGmailTokens, readOpportunities, readSyncRuns } from "@/lib/store";
-
-const columns = [
-  { status: "APPLIED", label: "Applied" },
-  { status: "WAITING", label: "Waiting" },
-  { status: "REJECTED", label: "Rejected" },
-] as const;
 
 const jobSites = [
   { label: "Wellfound", href: "https://wellfound.com/jobs" },
@@ -50,23 +44,12 @@ export default async function Home() {
             </div>
           </nav>
 
-          <div className="sidebar-bottom">
-            <div className="stat-stack">
-              <SidebarStat label="Gmail sync" value={isConnected ? "Connected" : "Setup"} />
-              <SidebarStat label="Account" value={gmailTokens?.accountEmail ?? "Not connected"} />
-              <SidebarStat label="Refresh" value="2x daily" />
-            </div>
-
-            <div className="stat-stack sidebar-counts">
-              {columns.map((column) => (
-                <SidebarStat
-                  key={column.status}
-                  label={column.label}
-                  value={String(applications.filter((app) => app.status === column.status).length)}
-                />
-              ))}
-            </div>
-          </div>
+          <SidebarStats
+            accountEmail={gmailTokens?.accountEmail}
+            initialApplications={applications}
+            isConnected={isConnected}
+            latestSync={latestSync}
+          />
         </aside>
 
         <section className="main-panel">
@@ -84,25 +67,13 @@ export default async function Home() {
                 </p>
               ) : null}
             </div>
-
-            <div className="actions">
-              <ThemeToggle />
-              <a className={isConnected ? "button button-secondary" : "button"} href="/api/google/connect">
-                {isConnected ? "Reconnect Gmail" : "Connect Gmail"}
-              </a>
-              <form action="/api/sync/gmail" method="post">
-                <button className="button button-secondary" type="submit">
-                  Scan Gmail
-                </button>
-              </form>
-            </div>
           </div>
 
           <JobBoard initialApplications={applications} />
 
           <OpportunityList initialOpportunities={opportunities} />
 
-          <section className="panel-row">
+          <section className="panel-row single-panel">
             <div className="panel">
               <h2>Latest email events</h2>
               <div className="timeline">
@@ -120,28 +91,10 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="panel">
-              <h2>Sync status</h2>
-              <p className="muted">
-                {latestSync
-                  ? `${latestSync.status}: scanned ${latestSync.scanned}, imported ${latestSync.imported}.`
-                  : "Manual scan is ready. Use the cron endpoint to refresh once or twice a day."}
-              </p>
-              {latestSync?.message ? <p className="muted error-copy">{latestSync.message}</p> : null}
-            </div>
           </section>
         </section>
       </div>
     </main>
-  );
-}
-
-function SidebarStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="sidebar-stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   );
 }
 

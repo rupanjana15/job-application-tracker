@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { deleteApplication, putApplication, readLocalApplications, seedLocalData } from "@/lib/local-db";
 import type { ApplicationStatus, JobApplication } from "@/lib/types";
 
 const columns: Array<{ status: ApplicationStatus; label: string; dot: string }> = [
@@ -13,6 +14,7 @@ export function JobBoard({ initialApplications }: { initialApplications: JobAppl
   const [applications, setApplications] = useState(initialApplications);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const selected = useMemo(
     () => applications.find((application) => application.id === selectedId) ?? null,
     [applications, selectedId],
@@ -22,6 +24,15 @@ export function JobBoard({ initialApplications }: { initialApplications: JobAppl
     : -1;
   const canGoPrevious = selectedIndex > 0;
   const canGoNext = selectedIndex >= 0 && selectedIndex < applications.length - 1;
+
+  useEffect(() => {
+    async function loadLocalData() {
+      await seedLocalData(initialApplications, []);
+      setApplications(await readLocalApplications());
+    }
+
+    loadLocalData();
+  }, [initialApplications]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -50,38 +61,72 @@ export function JobBoard({ initialApplications }: { initialApplications: JobAppl
   }, [applications, selectedId]);
 
   async function updateStatus(id: string, status: ApplicationStatus) {
-    setApplications((current) =>
-      current.map((application) =>
-        application.id === id ? { ...application, status, updatedAt: new Date().toISOString() } : application,
-      ),
-    );
+    let nextApplication: JobApplication | undefined;
 
-    await fetch("/api/applications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
+    setApplications((current) => {
+      const next = current.map((application) => {
+        if (application.id !== id) {
+          return application;
+        }
+
+        nextApplication = { ...application, status, updatedAt: new Date().toISOString() };
+        return nextApplication;
+      });
+
+      return next;
     });
+
+    if (nextApplication) {
+      await putApplication(nextApplication);
+      window.dispatchEvent(new Event("jobtrack:data"));
+    }
   }
 
   async function addApplication(formData: FormData) {
-    const response = await fetch("/api/applications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        company: formData.get("company"),
-        role: formData.get("role"),
-        status: formData.get("status"),
-        summary: formData.get("summary"),
-      }),
-    });
+    const now = new Date().toISOString();
+    const nextApplication: JobApplication = {
+      id: crypto.randomUUID(),
+      company: String(formData.get("company") ?? ""),
+      role: String(formData.get("role") ?? ""),
+      status: formData.get("status") as ApplicationStatus,
+      source: "manual",
+      summary: String(formData.get("summary") || "Added manually."),
+      details: String(formData.get("summary") || ""),
+      lastSeenAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    if (!response.ok) {
-      return;
-    }
-
-    const nextApplication = (await response.json()) as JobApplication;
+    await putApplication(nextApplication);
     setApplications((current) => [nextApplication, ...current]);
+    window.dispatchEvent(new Event("jobtrack:data"));
     setIsAdding(false);
+  }
+
+  async function trashApplication(id: string) {
+    setApplications((current) => current.filter((application) => application.id !== id));
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    setSelectedId((currentId) => (currentId === id ? null : currentId));
+    await deleteApplication(id);
+    window.dispatchEvent(new Event("jobtrack:data"));
+  }
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -112,27 +157,43 @@ export function JobBoard({ initialApplications }: { initialApplications: JobAppl
                 ) : (
                   items.map((application) => (
                     <article key={application.id} className="job-card">
-                      <button className="card-open" type="button" onClick={() => setSelectedId(application.id)}>
-                        <span className="card-company">{application.company}</span>
-                        <span className="card-role">{application.role}</span>
-                        <span className="card-summary">{application.summary}</span>
-                      </button>
-                      <div className="status-actions" aria-label={`Move ${application.company}`}>
-                        {columns.map((target) => (
-                          <button
-                            key={target.status}
-                            className={application.status === target.status ? "chip active" : "chip"}
-                            type="button"
-                            onClick={() => updateStatus(application.id, target.status)}
-                          >
-                            {target.label}
-                          </button>
-                        ))}
+                      <div className="job-card-head">
+                        <button className="card-open" type="button" onClick={() => toggleExpanded(application.id)}>
+                          <span className="card-company">{application.company}</span>
+                          <span className="card-role">{application.role}</span>
+                          <span className="card-row-meta">
+                            {application.source} · {formatDate(application.lastSeenAt)}
+                          </span>
+                        </button>
+                        <button
+                          className="card-trash"
+                          type="button"
+                          onClick={() => trashApplication(application.id)}
+                          aria-label={`Move ${application.company} to trash`}
+                        >
+                          ×
+                        </button>
                       </div>
-                      <div className="card-meta">
-                        <span>{application.source}</span>
-                        <span>{formatDate(application.lastSeenAt)}</span>
-                      </div>
+                      {expandedIds.has(application.id) ? (
+                        <div className="card-expanded">
+                          <p className="card-summary">{application.summary}</p>
+                          <div className="status-actions" aria-label={`Move ${application.company}`}>
+                            {columns.map((target) => (
+                              <button
+                                key={target.status}
+                                className={application.status === target.status ? "chip active" : "chip"}
+                                type="button"
+                                onClick={() => updateStatus(application.id, target.status)}
+                              >
+                                {target.label}
+                              </button>
+                            ))}
+                            <button className="chip" type="button" onClick={() => setSelectedId(application.id)}>
+                              Details
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </article>
                   ))
                 )}
@@ -152,6 +213,14 @@ export function JobBoard({ initialApplications }: { initialApplications: JobAppl
                 <p className="muted">{selected.role}</p>
               </div>
               <div className="modal-controls">
+                <button
+                  className="trash-modal-button"
+                  type="button"
+                  onClick={() => trashApplication(selected.id)}
+                  aria-label="Move job to trash"
+                >
+                  Trash
+                </button>
                 <button
                   className="icon-button"
                   type="button"

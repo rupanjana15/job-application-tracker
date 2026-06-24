@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncGmail } from "@/lib/google";
-import { addSyncRun } from "@/lib/store";
+import { addSyncRun, readOpportunities, readStoredApplications } from "@/lib/store";
 
 export async function POST() {
   return runSync();
@@ -21,7 +21,11 @@ async function runSync() {
     const result = await syncGmail();
     await addSyncRun({ status: "success", ...result });
 
-    return NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"));
+    return NextResponse.json({
+      ...result,
+      applications: await readStoredApplications(),
+      opportunities: await readOpportunities(),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown sync error";
     await addSyncRun({ status: "error", scanned: 0, imported: 0, message });
