@@ -68,6 +68,21 @@ export default async function Home() {
                 </p>
               ) : null}
             </div>
+
+            <aside className="tester-note" aria-label="Gmail tester note">
+              <p className="tester-note-kicker">Tiny app-owner note</p>
+              <h2>Gmail sync is invite-only for now.</h2>
+              <p>
+                I could not open Gmail access to everyone because Google asks for verification
+                and security review for public Gmail apps. My wallet said “maybe after the first
+                job offer.”
+              </p>
+              <p>
+                You can still run JobTrack locally, use manual entries, and import or export JSON.
+                To test Gmail sync, clone the project and add your own Google OAuth credentials
+                from the README.
+              </p>
+            </aside>
           </div>
 
           <JobBoard initialApplications={applications} />
