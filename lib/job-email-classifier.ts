@@ -39,6 +39,9 @@ const appliedSignals = [
   "received your application",
   "we have received",
   "your application was submitted",
+  "application successfully submitted",
+  "successfully submitted",
+  "submitted successfully",
   "thanks for your interest",
   "your application to",
   "you applied",
@@ -92,7 +95,7 @@ export function classifyJobEmail(email: RawEmail): ClassifiedJobEmail | null {
   }
 
   const hasApplicationContext =
-    /your application|you applied|thank you for applying|application received|received your application|interview|assessment|not selected|unfortunately|not moving forward/.test(
+    /your application|you applied|thank you for applying|application received|received your application|successfully submitted|submitted successfully|interview|assessment|not selected|unfortunately|not moving forward/.test(
       text,
     );
 
@@ -141,19 +144,32 @@ function getEmailText(email: RawEmail) {
 function isOpportunityEmail(email: RawEmail) {
   const text = getEmailText(email);
   const from = email.from.toLowerCase();
+  const hasStrongApplicationSignal =
+    /thank you for applying|application received|received your application|your application was submitted|application successfully submitted|successfully submitted|submitted successfully|interview invitation|unfortunately|not moving forward/.test(
+      text,
+    );
+
+  if (hasStrongApplicationSignal) {
+    return false;
+  }
 
   if (/linkedin|naukri|substack|indeed|wellfound|instahyre|cutshort|internshala/.test(from)) {
     if (/recommendations|newsletter|digest|job alert|recommended jobs|new jobs|career advice|substack/.test(text)) {
       return true;
     }
 
-    return !/thank you for applying|application received|interview invitation|unfortunately/.test(text);
+    return true;
   }
 
   return opportunitySignals.some((signal) => text.includes(signal));
 }
 
 function extractCompany(from: string, subject: string) {
+  const applicationToCompany = subject.match(/application\s+to\s+(.+?)\s+(?:successfully\s+submitted|submitted\s+successfully|was\s+submitted)/i);
+  if (applicationToCompany?.[1]) {
+    return tidy(applicationToCompany[1]);
+  }
+
   const nameMatch = from.match(/^"?([^"<]+)"?\s*</);
   if (nameMatch?.[1]) {
     return tidy(nameMatch[1].replace(/recruiting|careers|talent|jobs/gi, ""));
